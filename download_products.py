@@ -1,7 +1,9 @@
 from playwright.sync_api import sync_playwright
 import pandas as pd
 import time
-import re
+import locale
+
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # Função para extrair dados de um produto na página de detalhes
 def extract_product_data(page, url_product):
@@ -9,15 +11,7 @@ def extract_product_data(page, url_product):
         page.goto(url_product)
         time.sleep(.1)
         # Extrair informações usando os seletores fornecidos
-        name = page.query_selector('#name').get_attribute("value")
-        extrair_detalhes = lambda name: (
-            (p := name.split(" Cor:"))[0].strip(),
-            (c := p[1].split(" Tamanho:"))[0].strip() if len(p) > 1 else "",
-            c[1].strip() if len(p) > 1 and len(c) > 1 else ""
-        )
-        produto, cor, tamanho = extrair_detalhes(name)
-        atributo_tamanho = "Tamanho" if tamanho else ""
-        atributo_cor = "Cor" if cor else ""
+        produto = page.query_selector('#name').get_attribute("value")
             
         categoria = page.query_selector('#category').get_attribute("value").split(' >')[-1].strip()
         codigo = url_product.split("/")[-1]
@@ -25,7 +19,8 @@ def extract_product_data(page, url_product):
         ean = page.query_selector('#ean').get_attribute("value")
         ncm = page.query_selector('#ncm').get_attribute("value")   
 
-        preco = page.query_selector('#sale_value').get_attribute("value")
+        preco = float(page.query_selector('#sale_value').get_attribute("value"))
+        preco = locale.format_string("%.2f", preco, grouping=True)
         estoque = page.query_selector('#stock').get_attribute("value")
         peso = page.query_selector('#weight').get_attribute("value") 
         altura = int(float(page.query_selector('#height').get_attribute("value")) * 100)
@@ -35,7 +30,7 @@ def extract_product_data(page, url_product):
 
         
         imagens = list(map(lambda el: el.get_attribute("src"), page.query_selector_all('//*[@id="render_images"]/div/img')))
-        lista_imagens = ";".join(map(str, imagens))
+        lista_imagens = ", ".join(map(str, imagens))
         
         return {
             'Categoria': categoria,
@@ -83,13 +78,13 @@ def extract_product_data(page, url_product):
             "Texto do Botão": "",
             "Posição": "",
             "Brands": "",
-            "Nome do Atributo 1": atributo_tamanho,
-            "Valores do Atributo 1": tamanho,
+            "Nome do Atributo 1": "",
+            "Valores do Atributo 1": "",
             "Visibilidade do Atributo 1": 0,
             "Atributo Global 1": 1,
-            "Atributo Padrão 1": cor,
-            "Nome do Atributo 2": atributo_cor,
-            "Valores do Atributo 2": cor,
+            "Atributo Padrão 1": "",
+            "Nome do Atributo 2": "",
+            "Valores do Atributo 2": "",
             "Visibilidade do Atributo 2": 0,
             "Atributo Global 2": "",
             "Atributo Padrão 2": ""
@@ -131,7 +126,7 @@ def scrape_categories(base_url):
         page.locator('(//*[@class="menu-text"])[6]').click()
 
         
-        for n in range(1,127):
+        for n in range(1,129):
             page.goto(f"https://app.gruposhopmix.com.br/dashboard/catalog?page={n}")
             
             product_links = page.query_selector_all('//*[@class="card-body"]//h5/a')
@@ -143,8 +138,10 @@ def scrape_categories(base_url):
                 product_data = extract_product_data(page, url_product)
                 products_data.append(product_data)
                 cont = cont + 1
-                if cont >= 2:
+                if cont >= 20:
+                    time.sleep(1)
                     save_to_excel(products_data, 'products.xlsx')
+                    time.sleep(1)
                     cont = 0
         browser.close()
 
