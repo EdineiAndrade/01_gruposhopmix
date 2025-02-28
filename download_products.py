@@ -1,3 +1,4 @@
+from google_sheets import save_to_google_sheets
 from playwright.sync_api import sync_playwright
 import pandas as pd
 import time
@@ -7,6 +8,7 @@ locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # Função para extrair dados de um produto na página de detalhes
 def extract_product_data(page, url_product):
+
     try:
         page.goto(url_product)
         time.sleep(.1)
@@ -99,8 +101,10 @@ def save_to_excel(data, filename='products.xlsx'):
         df = pd.DataFrame.from_dict(data, orient="index").T
     else:    
         df = pd.DataFrame(data)
-    df.to_excel(filename, index=False)
-    print(f"Dados salvos em {filename}")
+    #df.to_excel(filename, index=False)
+    #print(f"Dados salvos em {filename}")
+    save_to_google_sheets(df)
+    
 
 # Função principal para realizar o scraping
 def scrape_categories(base_url):
@@ -138,7 +142,7 @@ def scrape_categories(base_url):
                 product_data = extract_product_data(page, url_product)
                 products_data.append(product_data)
                 cont = cont + 1
-                if cont >= 20:
+                if cont >= 1:
                     time.sleep(1)
                     save_to_excel(products_data, 'products.xlsx')
                     time.sleep(1)

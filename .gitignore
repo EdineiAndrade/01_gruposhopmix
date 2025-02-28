@@ -31,6 +31,7 @@ MANIFEST
 
 # Environments
 chave.json
+credentials.json
 .env
 .venv
 env/
